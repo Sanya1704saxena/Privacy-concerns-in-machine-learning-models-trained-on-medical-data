@@ -1,0 +1,3 @@
+model_device: cpu
+rounds_to_train: 10
+opt_treatment: CONTINUE_GLOBAL

@@ -1,0 +1,92 @@
+aggregator:
+  settings:
+    best_state_path: save/best.pbuf
+    db_store_rounds: 2
+    init_state_path: save/init.pbuf
+    last_state_path: save/last.pbuf
+    persist_checkpoint: true
+    persistent_db_path: local_state/tensor.db
+    rounds_to_train: 2
+    write_logs: false
+  template: openfl.component.aggregator.Aggregator
+
+assigner:
+  settings:
+    task_groups:
+    - name: learning
+      percentage: 1.0
+      tasks:
+        - aggregated_model_validation
+        - train
+        - locally_tuned_model_validation
+    - name: evaluation
+      percentage: 0
+      tasks:
+        - aggregated_model_validation
+  template: openfl.component.RandomGroupedAssigner
+
+collaborator:
+  settings:
+    db_store_rounds: 1
+    opt_treatment: RESET
+    use_delta_updates: false
+    collaborator_data_config: workspace/data/collaborator_data.csv  # ✅ Path to your collaborator mapping
+  template: openfl.component.collaborator.Collaborator
+
+
+compression_pipeline:
+  settings: {}
+  template: openfl.pipelines.NoCompressionPipeline
+
+data_loader:
+  settings: {}
+  template: src.dataloader.AdmissionDataLoader
+
+network:  
+  settings:
+    agg_addr: DESKTOP-C44KG49.domain.name
+    agg_port: 59928
+    cert_folder: cert
+    client_reconnect_interval: 5
+    enable_atomic_connections: false
+    hash_salt: auto
+    require_client_auth: true
+    transport_protocol: grpc
+    use_tls: true
+  template: openfl.federation.Network
+
+task_runner:
+  settings: {}
+  template: src.taskrunner.AdmissionTaskRunner
+
+model:  # ✅ THIS BLOCK IS ADDED
+  template: src.model_1.MLP
+
+tasks:
+  aggregated_model_validation:
+    function: validate_task
+    kwargs:
+      apply: global
+      metrics:
+        - acc
+  locally_tuned_model_validation:
+    function: validate_task
+    kwargs:
+      apply: local
+      metrics:
+        - acc
+  train:
+    function: train_task
+    kwargs:
+      epochs: 1
+      metrics:
+        - loss
+  settings: {}
+  
+data:
+  path: plan/data.yaml
+  cols_file: plan/cols.yaml
+
+env:
+  python_path: src
+  requirements_path: requirements.txt
